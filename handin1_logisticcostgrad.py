@@ -70,8 +70,8 @@ class LogisticRegressionClassifier():
         m = X.shape[0] #number of samples
         A = logistic(np.dot(X,np.transpose(w)))
         cost = -1/m * np.sum(np.dot(y,np.log(A))+np.dot((1-y),np.log(1-A)))
-        Xt = np.transpose(-X)
-        grad = np.dot(Xt,(y-A))
+        Xt = np.transpose(X)
+        grad = np.dot(-Xt,(y-A))
         #grad = transpose((1./m)*transpose(sigmoid(X.dot(theta)) - y).dot(X))"""
         
         ### END CODE

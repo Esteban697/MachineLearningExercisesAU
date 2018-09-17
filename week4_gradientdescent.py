@@ -33,12 +33,12 @@ def gd(a, step_size=0.1, steps=42):
     """
     out = []
     ### YOUR CODE HERE
-    out.append(np.array(256,1))
+    out.append(np.array([256,1]))
     for i in range(steps):
         point = out[i]
-        gradient = (0.5*2*a[i],0.5*2*a[i+1])
+        gradient = np.array([0.5*2*a[i],0.5*2*a[i+1]])
         npoint = point - step_size*gradient
-		out.append(npoint)
+        out.append(npoint)
     ### END CODE
     return out
 
