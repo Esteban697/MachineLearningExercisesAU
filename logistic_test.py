@@ -11,7 +11,7 @@ import pandas as pd
 import os
 import urllib
 from sklearn.model_selection import train_test_split
-from logistic_regression_solved import LogisticRegressionClassifier
+from handin1_logregclassifier import LogisticRegressionClassifier
 from h1_util import print_score, export_fig
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser
@@ -72,6 +72,7 @@ def branche_data_test(lr=0.1, batch_size=16, epochs=50):
     c.fit(feat_train)
     bag_of_words_feat_train = c.transform(feat_train).toarray()
     classifier = LogisticRegressionClassifier()
+    print(bag_of_words_feat_train.mean())
     classifier.fit(bag_of_words_feat_train, y_train, lr=lr, batch_size=batch_size, epochs=epochs)
     print('Logistic Regression Industri Codes Classifier')
     bag_of_words_feat_test = c.transform(feat_test).toarray()
