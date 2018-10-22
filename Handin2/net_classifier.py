@@ -38,6 +38,19 @@ def softmax(X):
     """
     res = np.zeros(X.shape)
     ### YOUR CODE HERE no for loops please
+    if X.ndim==1:
+        maxrow = np.max(X)
+        res1 = np.log(np.sum(np.exp(X - maxrow))) + maxrow
+        res = np.exp(X - res1)
+    else:
+        idx=0
+        for row in X:
+            maxrow = np.max(row)
+            res1 = np.sum(np.exp(row - maxrow))
+            res2 = np.log(res1) + maxrow
+            res3 = np.exp(row - res2)
+            res[idx,:] = res3
+            idx += 1
     ### END CODE
     return res
 
@@ -51,6 +64,10 @@ def relu(x):
         Beware of np.max and look at np.maximum
     """
     ### YOUR CODE HERE
+    res = x
+    for i in range(x.shape[0]):
+        if x[i] <= 0:
+            res[i]=0
     ### END CODE
     return res
 
@@ -257,4 +274,4 @@ if __name__ == '__main__':
     X = np.random.randn(batch_size, input_dim)
     Y = np.array([0, 1, 2, 0, 1, 2, 0])
     nc.cost_grad(X, Y, params, reg=0)
-    test_grad()
+    #test_grad()
