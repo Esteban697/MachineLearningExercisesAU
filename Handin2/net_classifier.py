@@ -64,10 +64,7 @@ def relu(x):
         Beware of np.max and look at np.maximum
     """
     ### YOUR CODE HERE
-    res = x
-    for i in range(x.shape[0]):
-        if x[i] <= 0:
-            res[i]=0
+    res = np.maximum(x, 0)
     ### END CODE
     return res
 
@@ -166,12 +163,27 @@ class NetClassifier():
         labels = one_in_k_encoding(y, W2.shape[1]) # shape n x k
                         
         ### YOUR CODE HERE - FORWARD PASS - compute regularized cost and store relevant values for backprop
+        Z1 = X.dot(W1) + b1
+        A1 = relu(Z1) # ReLU activation
+        Z2 = A1.dot(W2) + b2
+        c = reg * (np.sum(np.square(W1)) + np.sum(np.square(W2))) #decay parameter
+        costnonreg = softmax(Z2) #softmax
+        cost = costnonreg + c #cost function regularized
         ### END CODE
         
         ### YOUR CODE HERE - BACKWARDS PASS - compute derivatives of all (regularized) weights and bias, store them in d_w1, d_w2' d_w2, d_b1, d_b2
+        delta3 = np.dot(y,labels)
+        #delta3[range(X.shape[0]), y] -= 1
+        d_w2 = (A1.T).dot(delta3)
+        d_b2 = np.sum(delta3, axis=0, keepdims=True)
+        delta2 = delta3.dot(W2.T) * (1. * (A1 > 0)) #derivative of ReLU
+        d_w1 = np.dot(X.T, delta2)
+        d_b1 = np.sum(delta2, axis=0)
+        d_w2 += reg * W1 # Add regularization terms
+        d_w1 += reg * W2
         ### END CODE
         # the return signature
-        return None, {'d_w1': None, 'd_w2': None, 'd_b1': None, 'd_b2': None}
+        return cost, {'d_w1': d_w1, 'd_w2': d_w2, 'd_b1': d_b1, 'd_b2': d_b2}
         
     def fit(self, X_train, y_train, X_val, y_val, init_params, batch_size=32, lr=0.1, reg=1e-4, epochs=30):
         """ Run Mini-Batch Gradient Descent on data X, Y to minimize the in sample error (1/n)Cross Entropy for Neural Net classification
@@ -274,4 +286,4 @@ if __name__ == '__main__':
     X = np.random.randn(batch_size, input_dim)
     Y = np.array([0, 1, 2, 0, 1, 2, 0])
     nc.cost_grad(X, Y, params, reg=0)
-    #test_grad()
+    test_grad()
