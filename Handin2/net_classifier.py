@@ -110,6 +110,18 @@ class NetClassifier():
             params = self.params
         pred = None
         ### YOUR CODE HERE
+        W1 = params['W1']
+        b1 = params['b1']
+        W2 = params['W2']
+        b2 = params['b2']
+        Z1 = X.dot(W1) + b1
+        A1 = relu(Z1) # ReLU activation
+        Z2 = A1.dot(W2) + b2
+        OUT = softmax(Z2) #Output
+        idx = 0
+        for row in OUT:
+            pred[idx] = np.argmax(OUT)
+            idx += 1
         ### END CODE
         return pred
      
@@ -128,11 +140,14 @@ class NetClassifier():
             params = self.params
         acc = None
         ### YOUR CODE HERE
+        guess = self.predict(X)
+        correct = guess == y #check data
+        acc =  np.count_nonzero(correct)/X.shape[0]
         ### END CODE
         return acc
     
     @staticmethod
-    def cost_grad(X, y, params, reg=0.0):
+    def cost_grad(X, y, params, reg):
         """ Compute cost and gradient of neural net on data X with labels y using weight decay parameter c
         You should implement a forward pass and store the intermediate results 
         and the implement the backwards pass using the intermediate stored results
@@ -162,25 +177,28 @@ class NetClassifier():
         b2 = params['b2']
         labels = one_in_k_encoding(y, W2.shape[1]) # shape n x k
                         
-        ### YOUR CODE HERE - FORWARD PASS - compute regularized cost and store relevant values for backprop
+        ### YOUR CODE HERE - FORWARD PASS - compute regularized cost and store 
+        ###relevant values for backprop
+        (n,d) = X.shape #dims
         Z1 = X.dot(W1) + b1
         A1 = relu(Z1) # ReLU activation
         Z2 = A1.dot(W2) + b2
+        OUT = softmax(Z2) #Output
+        costnonreg = -(labels*np.log(OUT)).sum() / X.shape[0] #Loss function as cost
         c = reg * (np.sum(np.square(W1)) + np.sum(np.square(W2))) #decay parameter
-        costnonreg = softmax(Z2) #softmax
         cost = costnonreg + c #cost function regularized
         ### END CODE
         
-        ### YOUR CODE HERE - BACKWARDS PASS - compute derivatives of all (regularized) weights and bias, store them in d_w1, d_w2' d_w2, d_b1, d_b2
-        delta3 = np.dot(y,labels)
-        #delta3[range(X.shape[0]), y] -= 1
-        d_w2 = (A1.T).dot(delta3)
-        d_b2 = np.sum(delta3, axis=0, keepdims=True)
-        delta2 = delta3.dot(W2.T) * (1. * (A1 > 0)) #derivative of ReLU
-        d_w1 = np.dot(X.T, delta2)
-        d_b1 = np.sum(delta2, axis=0)
-        d_w2 += reg * W1 # Add regularization terms
-        d_w1 += reg * W2
+        ### YOUR CODE HERE - BACKWARDS PASS - compute derivatives of all (regularized)
+        ###weights and bias, store them in d_w1, d_w2' d_w2, d_b1, d_b2
+        delta = -labels + OUT
+        d_w2 = ((A1.T).dot(delta))/n 
+        d_b2 = np.mean(delta, axis=0, keepdims=True)
+        delta2 = delta.dot(W2.T) * (1. * (A1 > 0)) #delta A1 times derivative of ReLU
+        d_w1 = (np.dot(X.T, delta2))/n
+        d_b1 = np.mean(delta2, axis=0, keepdims=True)
+        d_w1 = d_w1 + reg * 2 * W1 #regularization
+        d_w2 = d_w2 + reg * 2 * W2
         ### END CODE
         # the return signature
         return cost, {'d_w1': d_w1, 'd_w2': d_w2, 'd_b1': d_b1, 'd_b2': d_b2}
@@ -210,16 +228,51 @@ class NetClassifier():
         b2 = init_params['b2']
 
         ### YOUR CODE HERE
+        earlystopchange = 0.01 #improvement of 1% percent
+        i = 0
+        train_loss = []
+        train_acc = []
+        val_loss = []
+        val_loss.append(float('inf'))
+        val_acc = []
+        num_batches = 0
+        acum = 0
+        assert X_train.shape[0] == y_train.shape[0] #check data
+        for epoch in range(epochs):
+            indices = np.arange(X_train.shape[0])
+            indices = np.random.permutation(indices) #Randomize training data using index
+            for start_indx in range(0, X_train.shape[0] - batch_size + 1, batch_size):
+                chunk = indices[start_indx:start_indx + batch_size]
+                X_train_mini = X_train[chunk]
+                y_train_mini = y_train[chunk] #mini batch extracted
+                num_batches += 1
+                t_loss_mini, dictio = self.cost_grad(X_train_mini,y_train_mini,init_params,reg)
+                acum += t_loss_mini
+                W1 -= lr * dictio['d_w1'] #change weights 1
+                b1 -= lr * dictio['d_b1']
+                W2 -= lr * dictio['d_w2'] #change weights 2
+                b2 -= lr * dictio['d_b2']
+            t_acc = self.score(X_train_mini,y_train_mini)
+            v_loss, dict2 = self.cost_grad(X_val,y_val,init_params,reg)
+            v_acc = self.score(X_val,y_val)
+            train_loss.append(acum/num_batches) #saves the mean of the loss in every mini batch
+            train_acc.append(t_acc)
+            val_loss.append(v_loss)
+            val_acc.append(v_acc)
+            print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, lr, acum/num_batches))
+            if (val_loss[i]-v_loss)/val_loss[i] < earlystopchange: #compare to previou loss
+                break #Early stopping condition is true
+            i +=1
         ### END CODE
         # hist dict should look like this with something different than none
         self.history = {
-            'train_loss': None,
-            'train_acc': None,
-            'val_loss': None,
-            'val_acc': None, 
+            'train_loss': train_loss,
+            'train_acc': train_acc,
+            'val_loss': val_loss,
+            'val_acc': val_acc, 
         }
         ## self.params should look like this with something better than none, i.e. the best parameters found.
-        self.params = {'W1': None, 'b1': None, 'W2': None, 'b2': None}
+        self.params = {'W1': W1, 'b1': b1, 'W2': W2, 'b2': b2}
     
         
 
