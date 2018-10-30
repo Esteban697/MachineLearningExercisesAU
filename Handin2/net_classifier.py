@@ -118,9 +118,10 @@ class NetClassifier():
         A1 = relu(Z1) # ReLU activation
         Z2 = A1.dot(W2) + b2
         OUT = softmax(Z2) #Output
+        pred = np.empty((OUT.shape[0]))
         idx = 0
         for row in OUT:
-            pred[idx] = np.argmax(OUT)
+            pred[idx] = np.argmax(row)
             idx += 1
         ### END CODE
         return pred
@@ -140,7 +141,7 @@ class NetClassifier():
             params = self.params
         acc = None
         ### YOUR CODE HERE
-        guess = self.predict(X)
+        guess = self.predict(X, self.params)
         correct = guess == y #check data
         acc =  np.count_nonzero(correct)/X.shape[0]
         ### END CODE
@@ -228,17 +229,19 @@ class NetClassifier():
         b2 = init_params['b2']
 
         ### YOUR CODE HERE
-        earlystopchange = 0.01 #improvement of 1% percent
+        earlystopchange = 0.001 #improvement of 0.1% percent
         i = 0
-        train_loss = []
-        train_acc = []
-        val_loss = []
-        val_loss.append(float('inf'))
-        val_acc = []
+        train_loss = np.zeros(epochs)
+        train_acc = np.zeros(epochs)
+        val_loss = np.zeros(epochs)
+        val_acc = np.zeros(epochs)
+        prev_t_loss = 1.0
         num_batches = 0
         acum = 0
         assert X_train.shape[0] == y_train.shape[0] #check data
         for epoch in range(epochs):
+            if (epoch!=0):
+                prev_t_loss = acum/num_batches
             indices = np.arange(X_train.shape[0])
             indices = np.random.permutation(indices) #Randomize training data using index
             for start_indx in range(0, X_train.shape[0] - batch_size + 1, batch_size):
@@ -252,15 +255,19 @@ class NetClassifier():
                 b1 -= lr * dictio['d_b1']
                 W2 -= lr * dictio['d_w2'] #change weights 2
                 b2 -= lr * dictio['d_b2']
-            t_acc = self.score(X_train_mini,y_train_mini)
-            v_loss, dict2 = self.cost_grad(X_val,y_val,init_params,reg)
-            v_acc = self.score(X_val,y_val)
-            train_loss.append(acum/num_batches) #saves the mean of the loss in every mini batch
-            train_acc.append(t_acc)
-            val_loss.append(v_loss)
-            val_acc.append(v_acc)
+                self.params = {'W1': W1, 'b1': b1, 'W2': W2, 'b2': b2}
+            t_acc = self.score(X_train,y_train,self.params)
+            v_loss, dict2 = self.cost_grad(X_val,y_val,self.params,reg)
+            v_acc = self.score(X_val,y_val,self.params)
+            train_loss[epoch] = acum/num_batches #saves the mean of the loss in every mini batch
+            train_acc[epoch] = t_acc
+            print(t_acc)
+            val_loss[epoch] = v_loss
+            val_acc[epoch] = v_acc
             print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, lr, acum/num_batches))
-            if (val_loss[i]-v_loss)/val_loss[i] < earlystopchange: #compare to previou loss
+            if (np.abs(prev_t_loss-(train_loss[epoch]))/prev_t_loss) < earlystopchange: #compare
+                print(prev_t_loss-(train_loss[epoch])/prev_t_loss)
+                print('Early Stop')
                 break #Early stopping condition is true
             i +=1
         ### END CODE
