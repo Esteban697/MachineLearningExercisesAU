@@ -7,6 +7,7 @@ Created on Mon Nov  5 13:31:03 2018
 Project 3 - Machine Learning course Fall 2018
 Hidden Markov Models to predict genomes
 """
+import numpy as np
 
 def read_fasta_file(filename):
     """
@@ -114,10 +115,33 @@ emission_probs_3_state = [
 
 hmm_3_state = hmm(init_probs_3_state, trans_probs_3_state, emission_probs_3_state)
 
-"""Create a validation function"""
+"""Validation function for probabilities in HMM"""
 
 def validate_hmm(model):
-    pass
+    assert np.sum(model.init_probs)==1.0
+    assert np.sum(model.trans_probs)==len(model.trans_probs)
+    assert np.sum(model.emission_probs)==len(model.emission_probs)
+    if True in ((np.array(model.init_probs))<0):
+        print("Found value is below range in initial probabilities")
+        return
+    if True in ((np.array(model.init_probs))>1):
+        print("Found value is above range in initial probabilities")
+        return
+    if True in ((np.array(model.trans_probs))<0):
+        print("Found value is below range in transition probabilities")
+        return
+    if True in ((np.array(model.trans_probs))>1):
+        print("Found value is above range in transition probabilities")
+        return
+    if True in ((np.array(model.emission_probs))<0):
+        print("Found value is below range in emission probabilities")
+        return
+    if True in ((np.array(model.emission_probs))>1):
+        print("Found value is above range in emission probabilities")
+        return
+    print("Valid probailities for this model")
+
+
 
 
 
