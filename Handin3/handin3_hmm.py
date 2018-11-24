@@ -34,8 +34,6 @@ def read_fasta_file(filename):
         sequences[name] = ''.join(lines)
     return sequences
 
-#x = read_fasta_file('data-handin3/genome1.fa')
-
 """Example model structure in week 10 exercises"""
 
 def translate_observations_to_indices(obs):
@@ -59,6 +57,8 @@ obs = translate_indices_to_observations(translate_observations_to_indices(obs_ex
 
 path_example = '33333333333321021021021021021021021021021021021021'
 indices = translate_path_to_indices(path_example)
+
+gen1 = read_fasta_file('data-handin3/genome1.fa')
 
 """HMM"""
 class hmm:
@@ -140,6 +140,19 @@ def validate_hmm(model):
         print("Found value is above range in emission probabilities")
         return
     print("Valid probailities for this model")
+    
+def calculate_pxz(x_value,z_value,string_input_x,string_input_z):
+    assert string_input_x.Length == string_input_z.Length
+    count1=0
+    count2=0
+    index=0
+    for c in string_input_x:
+        index+=1
+        #Add count of X value accordingly to count1
+        if string_input_z[index]==z_value:
+            count2+=1
+    prob_xgivenz=count1/count2
+    return prob_xgivenz
 
 
 
