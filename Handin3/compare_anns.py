@@ -81,10 +81,13 @@ def count_cr(true, pred):
 def print_stats(tp, fp, tn, fn):
     sn = float(tp) / (tp + fn)
     sp = float(tp) / (tp + fp)
-    acp = 0.25 * (float(tp)/(tp+fn) + float(tp)/(tp+fp) + float(tn)/(tn+fp) + float(tn)/(tn+fn))
+    if (tp+fn)==0 or (tp+fp)==0 or (tn+fp)==0 or (tn+fn)==0:
+        acp=0
+    else:
+        acp = 0.25 * (float(tp)/(tp+fn) + float(tp)/(tp+fp) + float(tn)/(tn+fp) + float(tn)/(tn+fn))
     ac = (acp - 0.5) * 2
     print("Sn = %.4f, Sp = %.4f, AC = %.4f" % (sn, sp, ac))
-
+    
 def print_all(true, pred):
     (totalc, tp, fp, tn, fn) = count_c(true, pred)
     if totalc > 0:

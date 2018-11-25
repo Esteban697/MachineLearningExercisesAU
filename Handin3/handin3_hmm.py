@@ -50,6 +50,10 @@ def translate_path_to_indices(path):
 def translate_indices_to_path(indices):
     return ''.join([str(i) for i in indices])
 
+def translate_indices_to_guesses(indices):
+    mapping = ['c', 'n', 'r']
+    return ''.join(mapping[int(idx)] for idx in indices)
+
 """Examples"""
 obs_example = 'GTTTCCCAGTGTATATCGAGGGATACTACGTGCATAGTAACATCGGCCAA'
 obs_example_trans = translate_observations_to_indices(obs_example)
@@ -120,7 +124,7 @@ hmm_3_state = hmm(init_probs_3_state, trans_probs_3_state, emission_probs_3_stat
 def validate_hmm(model):
     assert np.sum(model.init_probs)==1.0
     assert np.sum(model.trans_probs)==len(model.trans_probs)
-    assert np.sum(model.emission_probs)==len(model.emission_probs)
+    #assert np.sum(model.emission_probs)==len(model.emission_probs)
     if True in ((np.array(model.init_probs))<0):
         print("Found value is below range in initial probabilities")
         return
@@ -141,19 +145,105 @@ def validate_hmm(model):
         return
     print("Valid probailities for this model")
     
+def calculate_p(value,input_string):
+    count=0
+    for c in input_string:
+        if c==value:
+            count+=1
+    return count/len(input_string)
+    
 def calculate_pxz(x_value,z_value,string_input_x,string_input_z):
-    assert string_input_x.Length == string_input_z.Length
+    assert len(string_input_x) == len(string_input_z)
     count1=0
     count2=0
     index=0
     for c in string_input_x:
-        index+=1
-        #Add count of X value accordingly to count1
         if string_input_z[index]==z_value:
             count2+=1
+            if c==x_value:
+                count1+=1
+        index+=1
+    if count2==0:
+        print("The Z value {} is not found in the string".format(z_value))
+        return -1
     prob_xgivenz=count1/count2
     return prob_xgivenz
 
+def calculate_pztoz(zi_prev,zi,string_input_z):
+    count1=0
+    count2=0
+    for i in range(len(string_input_z)-1):
+        if string_input_z[i]==zi_prev:
+            count2+=1
+            if string_input_z[i+1]==zi:
+                count1+=1
+    if count2==0:
+        print("The Z value {} is not found in the string".format(string_input_z))
+        return -1
+    return count1/count2
+
+def trans_probs_3_matrix(string_input_z):
+    row1 = [calculate_pztoz("C","C",string_input_z),
+               calculate_pztoz("C","N",string_input_z),
+               calculate_pztoz("C","R",string_input_z)]
+    row2 = [calculate_pztoz("N","C",string_input_z),
+               calculate_pztoz("N","N",string_input_z),
+               calculate_pztoz("N","R",string_input_z)]
+    row3 = [calculate_pztoz("R","C",string_input_z),
+               calculate_pztoz("R","N",string_input_z),
+               calculate_pztoz("R","R",string_input_z)]
+    return row1,row2,row3
+
+def emission_probs_matrix(string_input_x,string_input_z):
+    row1 = [calculate_pxz("A","C",string_input_x,string_input_z),
+               calculate_pxz("C","C",string_input_x,string_input_z),
+               calculate_pxz("T","C",string_input_x,string_input_z),
+               calculate_pxz("G","C",string_input_x,string_input_z)]
+    row2 = [calculate_pxz("A","N",string_input_x,string_input_z),
+               calculate_pxz("C","N",string_input_x,string_input_z),
+               calculate_pxz("T","N",string_input_x,string_input_z),
+               calculate_pxz("G","N",string_input_x,string_input_z)]
+    row3 = [calculate_pxz("A","R",string_input_x,string_input_z),
+               calculate_pxz("C","R",string_input_x,string_input_z),
+               calculate_pxz("T","R",string_input_x,string_input_z),
+               calculate_pxz("G","R",string_input_x,string_input_z)]
+    return row1,row2,row3
+
+def viterbi(pi, a, b, obs):
+    
+    nStates = np.shape(b)[0]
+    T = np.shape(obs)[0]
+    
+    # init blank path
+    path = np.zeros(T)
+    # delta --> highest probability of any path that reaches state i
+    delta = np.float64(np.zeros((nStates, T)))
+    # phi --> argmax by time step for each state
+    phi = np.zeros((nStates, T))
+    
+    # init delta and phi 
+    delta[:, 0] = pi * b[:, obs[0]]
+    phi[:, 0] = 0
+
+    print('\nStart Walk Forward\n')    
+    # the forward algorithm extension
+    for t in range(1, T):
+        for s in range(nStates):
+            #delta[s, t] = np.max(delta[:, t-1] * np.log(a[:, s])) * np.log(b[s, obs[t]])
+            delta[s, t] = np.max(delta[:, t-1] * a[:, s]) * b[s, obs[t]] 
+            phi[s, t] = np.argmax(delta[:, t-1] * a[:, s])
+            #print('s={s} and t={t}: phi[{s}, {t}] = {phi}'.format(s=s, t=t, phi=phi[s, t]))
+    
+    # find optimal path
+    print('-'*50)
+    print('Start Backtrace\n')
+    path[T-1] = np.argmax(delta[:, T-1])
+    #p('init path\n    t={} path[{}-1]={}\n'.format(T-1, T, path[T-1]))
+    for t in range(T-2, -1, -1):
+        path[t] = phi[int(path[t+1]), int(t+1)]
+        #p(' '*4 + 't={t}, path[{t}+1]={path}, [{t}+1]={i}'.format(t=t, path=path[t+1], i=[t+1]))
+        #print('path[{}] = {}'.format(t, path[t]))
+    return path, delta, phi
 
 
 
