@@ -4,24 +4,29 @@ Created on Sun Nov 25 21:44:43 2018
 
 @author: esteb
 """
-import handin3_hmm as hmm3
-import compare_anns as comp
+###libraries
 import numpy as np
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 from pprint import pprint
-from Bio import SeqIO
+###Other codes
+import handin3_hmm as hmm3
+import compare_anns as comp
 import text_to_fasta as ttf
 
-def read_genes_train(filename1, filename2):
+def read_genes_train(filename1, filename2, n_samples):
     #calculate the probabilities for the model
     file_path1='data-handin3/' + filename1 + '.fa'
     file_path2='data-handin3/' + filename2 + '.fa'
     sequence = hmm3.read_fasta_file(file_path1)
     annot = hmm3.read_fasta_file(file_path2)
-    gen = sequence[filename1]
-    ann = annot[filename2]
+    if n_samples == None:
+        gen = sequence[filename1]
+        ann = annot[filename2]
+    else:
+        gen = sequence[filename1][0:(n_samples-1)]
+        ann = annot[filename2][0:(n_samples-1)]
 
     print('\n','Observable States')
     states = ['C', 'A', 'T', 'G']
@@ -32,7 +37,7 @@ def read_genes_train(filename1, filename2):
     state_space = pd.Series(pi, index=states, name='states')
     print(state_space)
     
-    print('\n','Hidden States')
+    print('\n','Initial Probabilities')
     hidden_states = ['C', 'N', 'R']
     pi = [hmm3.calculate_p('C',ann),
           hmm3.calculate_p('N',ann),
@@ -52,12 +57,13 @@ def read_genes_train(filename1, filename2):
     b_df.loc[hidden_states[0]],b_df.loc[hidden_states[1]],b_df.loc[hidden_states[2]] = hmm3.emission_probs_matrix(gen,ann)
     print(b_df)
     emis_probs = b_df.values
-    return pi, trans_probs, emis_probs
+    return pi, trans_probs, emis_probs, ann, gen
     
 for i in range(5):
     name1='genome' + str(i+1)
     name2='true-ann' + str(i+1)
-    pi_new, trans_probs_new, emis_probs_new = read_genes_train(name1, name2)
+    print('\n','Probabilities for: ' + name1)
+    pi_new, trans_probs_new, emis_probs_new, ann, gen = read_genes_train(name1, name2, None)
     if i==0:
         pi=pi_new
         trans=trans_probs_new
@@ -77,19 +83,21 @@ print('\n','Transition probabilities(Mean)')
 print(trans)
 print('\n','Emission probabilities(Mean)')
 print(emission)
-
-filename1='genome8'
+gen_number=1
+filename1='genome' + str(gen_number)
 file_path1='data-handin3/' + filename1 + '.fa'
 sequence = hmm3.read_fasta_file(file_path1)
-gen = sequence[filename1]#[0:100000]
+gen = sequence[filename1]
 ind = hmm3.translate_observations_to_indices(gen)
-
-
 path, delta, phi = hmm3.viterbi(pi, trans, emission, ind)
-path_letters = hmm3.translate_indices_to_guesses(path)
-#comp.print_all(ann,path_letters)
-f= open("gen8.txt","w+")
-f.write(path_letters)
-f.close()
-ttf.convert("gen8","true-ann7")
+path_letters = hmm3.translate_indices_to_guesses(path) #predictions saved
+if gen_number >= 6:
+    f= open("gen" + str(gen_number) + ".txt","w+")
+    f.write(path_letters)
+    f.close()
+    ttf.convert("gen" + str(gen_number),"true-ann" + str(gen_number))
+filename2='true-ann' + str(gen_number)
+file_path2=filename2 + '.fasta'
+annotations = hmm3.read_fasta_file(file_path2)
+comp.print_all(annotations[filename2],path_letters)
 

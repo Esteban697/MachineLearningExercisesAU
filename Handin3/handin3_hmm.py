@@ -146,11 +146,15 @@ def validate_hmm(model):
     print("Valid probailities for this model")
     
 def calculate_p(value,input_string):
-    count=0
-    for c in input_string:
-        if c==value:
-            count+=1
-    return count/len(input_string)
+    #count=0
+    result=0
+    #for c in input_string:
+    #    if c==value:
+    #        count+=1
+    #result = count/len(input_string)
+    if input_string[0]==value:
+        result=1
+    return result
     
 def calculate_pxz(x_value,z_value,string_input_x,string_input_z):
     assert len(string_input_x) == len(string_input_z)
@@ -232,6 +236,43 @@ def viterbi(pi, a, b, obs):
             #delta[s, t] = np.max(delta[:, t-1] * np.log(a[:, s])) * np.log(b[s, obs[t]])
             delta[s, t] = np.max(delta[:, t-1] * a[:, s]) * b[s, obs[t]] 
             phi[s, t] = np.argmax(delta[:, t-1] * a[:, s])
+            #print('s={s} and t={t}: phi[{s}, {t}] = {phi}'.format(s=s, t=t, phi=phi[s, t]))
+    
+    # find optimal path
+    print('-'*50)
+    print('Start Backtrace\n')
+    path[T-1] = np.argmax(delta[:, T-1])
+    #p('init path\n    t={} path[{}-1]={}\n'.format(T-1, T, path[T-1]))
+    for t in range(T-2, -1, -1):
+        path[t] = phi[int(path[t+1]), int(t+1)]
+        #p(' '*4 + 't={t}, path[{t}+1]={path}, [{t}+1]={i}'.format(t=t, path=path[t+1], i=[t+1]))
+        #print('path[{}] = {}'.format(t, path[t]))
+    return path, delta, phi
+
+def viterbi_log(pi, a, b, obs):
+    
+    nStates = np.shape(b)[0]
+    T = np.shape(obs)[0]
+    a = np.float64(a)
+    b = np.float64(b)
+    # init blank path
+    path = np.zeros(T)
+    # delta --> highest probability of any path that reaches state i
+    delta = np.float64(np.zeros((nStates, T)))
+    # phi --> argmax by time step for each state
+    phi = np.float64(np.zeros((nStates, T)))
+    
+    # init delta and phi 
+    delta[:, 0] = pi * b[:, obs[0]]
+    phi[:, 0] = 0
+
+    print('\nStart Walk Forward\n')    
+    # the forward algorithm extension
+    for t in range(1, T):
+        for s in range(nStates):
+            #delta[s, t] = np.max(delta[:, t-1] * np.log(a[:, s])) * np.log(b[s, obs[t]])
+            delta[s, t] = np.max(np.log(delta[:, t-1] * a[:, s])) * np.log(b[s, obs[t]]) 
+            phi[s, t] = np.argmax(np.log(delta[:, t-1] * a[:, s]))
             #print('s={s} and t={t}: phi[{s}, {t}] = {phi}'.format(s=s, t=t, phi=phi[s, t]))
     
     # find optimal path
